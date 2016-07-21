@@ -14,6 +14,20 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(cache = FALSE)
 
+
+```
+
+# Overview
+Synopsis: Exploratory Analysis of the NOAA Storm Database (1950-2011) to analyze severe weather outcomes.
+
+Goals: 1. Identify events that are harmful to population health.
+       2. Identify events that have the greatest economic consequences.
+
+
+# Import Libraries and Create Functions
+```{r import_libs, echo=TRUE}
+library(dplyr)
+
 plot <- function(names, totals, columns, main, colors){
   colnames(totals) <- names
   
@@ -23,38 +37,25 @@ plot <- function(names, totals, columns, main, colors){
 }
 ```
 
-# Overview
-Synopsis: Exploratory Analysis for the Storm Data Analysis
-
-Goals: 1. Identify events that are harmful to the most people.
-       2. Identify events that have the greatest finacial impact.
-
-
-# Import Libraries
-```{r import_libs}
-library(dplyr)
-
-```
-
-# Read And Preprocess Data
+# Data Processing
+Read the original files and display column names.
 ```{r read_data, cache=TRUE}
 StormData <- read.csv("data/StormData.csv.bz2")
 colnames(StormData)
 ```
 
-Look through Event Types
-
+## Look through Labels given to Event Type.
+Before splitting the data into two reliable sets, clean up any data that our analysis would use.
+### 1. Identify Event Type Labels that should be scrubbed.
 ```{r CleanEventType}
 event_types <- as.data.frame(table(StormData$EVTYPE))
 event_types <- event_types[order(event_types$Var1), ]
-event_types
 ```
 
-Identify and Clean up Event Type Names
-Multiple events are joined by a slash, ampersand, or the word and.
-Everything else is adjusted for spelling errors or seperate nomenclature
+###Clean up a majority of Identified Names
+In order to properly count and categorize records that have possible multiple events, records that possess an ampersand, slash, or 'and' will be labeled as a multiple event.
 
-While thes regular expressions don't get all the mistakes, they do get a majority.
+The naming of the event is to be done on the general overriding idea behind the event. For example, wind 65+ will be categorized the same as wind 45+ because both specific events deal with the event type of wind. This is done over several different instances.
 ```{r REGEX Change}
 StormData$EVTYPE <- as.character(StormData$EVTYPE)
 StormData$EVTYPE[grepl("/|&|and", StormData$EVTYPE,ignore.case = TRUE)] <- "Multiple Event"
@@ -76,64 +77,38 @@ StormData$EVTYPE[grepl("heat", StormData$EVTYPE,ignore.case = TRUE)] <- "Heat"
 StormData$EVTYPE[grepl("(hurri|opal)", StormData$EVTYPE,ignore.case = TRUE)] <- "Hurricane"
 ```
 
-# Seperate Data To Relevant Data for Question
+## Seperate Data To Relevant Data for Question
 ```{r seperate data}
 health <- StormData[,(c(8,23:24))]
 property<-StormData[,c(8,25:28)]
 ```
 
-# Population Health Question
-## Health Totals
-```{r Population Health Total}
-health.totals <- aggregate(cbind(FATALITIES,INJURIES) ~ EVTYPE, data = health, sum, na.rm=TRUE)
-health.totals$TOTAL <- health.totals$FATALITIES + health.totals$INJURIES
-health.totals <- health.totals[order(-health.totals$TOTAL), ]
-health.totals <- health.totals[1:25,]
+##Property Data Processing
 
+### Magnitude Values
+These columns identify the magnitude that the damage shoohuld be multiplied against to accurately assess damage amount. 
 
-plot(health.totals$EVTYPE,
-     as.matrix(t(health.totals[,c(-1,-4)])),
-     colors = c("dark blue","red"),
-     columns = c("Fatalities","Injuries"),
-     main = "Disaster Casualties")
-```
-
-## Health Averages
-```{r Population Health Averages}
-health.averages <- aggregate(cbind(FATALITIES,INJURIES) ~ EVTYPE, data = health, mean, na.rm=TRUE)
-health.averages$TOTAL <- health.averages$FATALITIES + health.averages$INJURIES
-health.averages <- health.averages[order(-health.averages$TOTAL), ]
-health.averages <- health.averages[1:25,]
-
-
-plot(health.averages$EVTYPE,
-     as.matrix(t(health.averages[,c(-1,-4)])),
-     colors = c("dark blue","red"),
-     columns = c("Fatalities","Injuries"),
-     main = "Disaster Casualties")
-
-```
-
-It is easily said that Tornado's cause the largest risk to the overall population health. However, there are several other events that might overtake Tornado's if they occurred more often.
-
-# Economic Impact
-
-Using the corrections to the Storm Data in the above Health Section, we will begin to look at the Economic Impact of certain types of events. 
-
-We need to check the values of the economic data to ensure they are formated and corrected
-
+Replace the empty fields with the magnitude O 
 ```{r Load Property Data}
 table(property$PROPDMGEXP)
 table(property$CROPDMGEXP)
-```
 
-```{r Adjusting Damage Totals}
 property$PROPDMGEXP<-factor(property$PROPDMGEXP,levels=c("H","K","M","B","h","m","O"))
 property$PROPDMGEXP[is.na(property$PROPDMGEXP)] <- "O"
 
 property$CROPDMGEXP<-factor(property$CROPDMGEXP,levels=c("K","M","B","k","m","O"))
 property$CROPDMGEXP[is.na(property$CROPDMGEXP)] <- "O"
+```
 
+### Convert the magnitude into the multiplier used for calculating damage amount.
+Using the following key to identify the multiplier for the orders of magnitude.
+1. o(one) = 1
+2. h(undred)=100
+3. k(thousand)=1000
+4. m(million)=1000000
+5. b(billion)=1000000000
+
+```{r Adjusting Damage Totals}
 property$PROPDMGEXP <- as.character(property$PROPDMGEXP)
 property$CROPDMGEXP <- as.character(property$CROPDMGEXP)
 
@@ -156,30 +131,54 @@ property$PROPDMG <- property$PROPDMG * property$PROPDMGMLT
 property$CROPDMG <- property$CROPDMG * property$CROPDMGMLT
 property$total <- property$PROPDMG + property$CROPDMG
 
-head(property)
 ```
 
+# Results
+Now that everything is clean we will beign to analyze the data to answer our two goals for looking at this dataset
+
+## Population Health Question
+
+### Health Totals
+```{r Population Health Total}
+health.totals <- aggregate(cbind(FATALITIES,INJURIES) ~ EVTYPE, data = health, sum, na.rm=TRUE)
+health.totals$TOTAL <- health.totals$FATALITIES + health.totals$INJURIES
+health.totals <- health.totals[order(-health.totals$TOTAL), ]
+health.totals <- health.totals[1:25,]
+
+
+plot(health.totals$EVTYPE,
+     as.matrix(t(health.totals[,c(-1,-4)])),
+     colors = c("dark blue","red"),
+     columns = c("Fatalities","Injuries"),
+     main = "Most Harmful Event Type in the United States")
+```
+
+#### Population Health Assessment
+__It is easily said that tornado's cause the largest weather-related risk to the overall population health. However, the averages of the events tell a different story about the most deadly single weather events. This will require additional research and analysis to properly identify which event has the worst outcomes for popluation health.__
+
+## Economic Impact
+We will begin to look at the Economic Impact of certain types of events. 
+### Economic Health Results
 ```{r Economic Total}
 economic.total <- aggregate(cbind(PROPDMG,CROPDMG, total) ~ EVTYPE, data = property, sum, na.rm=TRUE)
-economic.total <- economic.total[order(-economic.total$total), ]
-economic.total <- economic.total[1:25,]
+economic.crop <- economic.total[order(-economic.total$CROPDMG), ]
+economic.crop <- economic.crop[1:25,]
 
-plot(economic.total$EVTYPE,
-      as.matrix(t(economic.total[,c(-1,-4)])),
+economic.prop <- economic.total[order(-economic.total$PROPDMG), ]
+economic.prop <- economic.prop[1:25,]
+
+plot(economic.prop$EVTYPE,
+     as.matrix(t(economic.prop[,c(-1,-3,-4)])),
      colors = c("dark blue","red"),
-     columns = c("Property Damage","Crop Damage"),
-     main = "Economic Impact of Weather")
+     columns = c("Property Damage"),
+     main = "Economic Impact of Weather on Propery Damage")
+
+plot(economic.crop$EVTYPE,
+     as.matrix(t(economic.crop[,c(-1,-2,-4)])),
+     colors = c("dark blue","red"),
+     columns = c("Crop Damage"),
+     main = "Economic Impact of Weather on Crop Damage")
 ```     
 
-```{r Economic Average}
-economic.average <- aggregate(cbind(PROPDMG,CROPDMG, total) ~ EVTYPE, data = property, mean, na.rm=TRUE)
-economic.average <- economic.average[order(-economic.average$total), ]
-economic.average <- economic.average[1:25,]
-
-plot(economic.average$EVTYPE,
-      as.matrix(t(economic.average[,c(-1,-4)])),
-     colors = c("dark blue","red"),
-     columns = c("Property Damage","Crop Damages"),
-     main = "Economic Impact of Weather")
-```     
-
+#### Economic Impact Assessment
+__While drought has the largest impact on crops, it is easy to see that flooding produces the largest overall weather-related impact to the economy. With the cost fully associated with crop destruction is not in the scope of this analysis, futher research is required to determine the full economic impact of one of these weather related events.__

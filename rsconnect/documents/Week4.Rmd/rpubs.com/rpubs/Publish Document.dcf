@@ -1,0 +1,7 @@
+name: Publish Document
+account: rpubs
+server: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/197738/c30d22f43cb444a4b3e93ae4f6f7ae0e
+bundleId: https://api.rpubs.com/api/v1/document/197738/c30d22f43cb444a4b3e93ae4f6f7ae0e
+url: http://rpubs.com/waaronmorris/197738
+when: 1469138367.47753
