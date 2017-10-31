@@ -1,4 +1,4 @@
-# Reproducible-Research-Week-4
+# Reproducible-Research-Week--4
 
 1. Has either a (1) valid RPubs URL pointing to a data analysis document for this assignment been submitted; or (2) a complete PDF file presenting the data analysis been uploaded?
 2. Is the document written in English?
