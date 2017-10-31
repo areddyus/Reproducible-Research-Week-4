@@ -1,6 +1,6 @@
 ---
 title: "Storm Data Analysis"
-author: "W. Aaron Morris"
+author: "Reddy"
 output: 
   html_document: 
     fig_caption: yes
